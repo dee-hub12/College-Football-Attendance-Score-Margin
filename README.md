@@ -12,7 +12,7 @@ This file is written in Markdown for GitHub. On GitHub it is displayed as a form
 
 ## Quick start
 
-1. Install R (RStudio is optional). Download or clone the repository, and open `college-football-attendance.Rproj` if using RStudio.
+1. Install R and RStudio. Download or clone the repository, and open `college-football-attendance.Rproj` if using RStudio.
 2. Obtain the five conference workbooks and prepare the two required, completed classification files described below. Put them directly in `data/raw/`. The public repository does **not** include populated study datasets.
 3. If your data require corrections, prepare `data/raw/verification_log.csv` with the documented sources. If no corrections are proposed by the implemented checks, that log is not required.
 4. From the repository root, run:
