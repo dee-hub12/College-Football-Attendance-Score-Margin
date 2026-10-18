@@ -1,155 +1,294 @@
+
 # Attendance and the Home Score Margin in College Football
 
 **Research code and reproducibility documentation** for *Attendance and the Home Score Margin in College Football: Evidence from the COVID-19 Seasons*.
 
-This repository contains the R scripts used to study associations between stadium attendance and the home-team score margin in the Atlantic Coast Conference (ACC), Big Ten, Big 12, Pac-12, and Southeastern Conference (SEC) during the 2019–2021 seasons. The workflow prepares game records, checks them against independent schedules, fits conference-specific regression models, pools attendance estimates using restricted maximum likelihood (REML) random-effects meta-analysis, and generates sensitivity analyses, hierarchical models, tables, figures, and numerical diagnostics. The results describe **associations, not causal effects**.
+## Overview
 
-> **Scope:** This is the original study's reproducibility workflow, **not a general-purpose tool for arbitrary conferences or seasons**. Conference names, workbook filenames, championship-game matching rules, 2019–2021 independent schedule files, and some study-specific corrections are coded in `R/01_clean_data.R`. Applying the approach to different conferences, years, or schemas requires reviewing and adapting those rules and validating the revised analysis. The original study's sample sizes and estimates are benchmarks **only for equivalent original-study inputs**.
+This repository contains the R code used to investigate the association between stadium attendance and home-team score margin in college football during the 2019–2021 seasons.
 
-## Reading this documentation
+The study includes games from five Power Five conferences: the Atlantic Coast Conference (ACC), Big Ten, Big 12, Pac-12, and Southeastern Conference (SEC).
 
-This file is written in Markdown for GitHub. On GitHub it is displayed as a formatted page. In RStudio, open it in Markdown Preview (if available), or read it as plain text. Section names below are written out rather than linked to file-like `#section` paths, to avoid navigation errors in some RStudio views.
+The analyses include:
 
-## Quick start
+- Data cleaning, independent game verification, and descriptive statistics.
+- Conference-specific regression models.
+- Random-effects meta-analysis using restricted maximum likelihood (REML).
+- Separate home-intercept and attendance-effect specifications.
+- One-stage hierarchical modeling.
+- Robustness and sensitivity analyses.
+- Model diagnostics and numerical optimization checks.
+- A final 1,000-replicate hierarchical simulation study assessing parameter recovery and confidence-interval coverage.
 
-1. Install R and RStudio. Download or clone the repository, and open `college-football-attendance.Rproj` if using RStudio.
-2. Obtain the five conference workbooks and prepare the two required, completed classification files described below. Put them directly in `data/raw/`. The public repository does **not** include populated study datasets.
-3. If your data require corrections, prepare `data/raw/verification_log.csv` with the documented sources. If no corrections are proposed by the implemented checks, that log is not required.
-4. From the repository root, run:
+**Important:** The findings describe statistical associations, not causal effects of attendance.
 
-   ```r
-   source("run_all.R")
-   ```
+## Study Data
 
-   Or from a terminal whose working directory is the repository root: `Rscript run_all.R`.
-5. If validation stops, read the section titled **What to do when validation stops** in this README. Investigate the reported discrepancy before changing any data or code.
-6. After completion, review the generated sample, diagnostics, tables, and figures. Completion alone does not establish that the input data or resulting inferences are correct.
+The original dataset contained 824 games from the 2019–2021 seasons. After excluding 15 conference championship games, the final analytical sample contained **809 games**, including **67 spectator-free games**.
 
-The hierarchical fitting and simulation steps may take considerably longer than the initial regressions. `R/00_setup.R` checks for required packages (`readxl`, `metafor`, `ggplot2`, `sandwich`, `lmtest`, and `lme4`) and attempts to install missing packages from CRAN. Record the R and package versions for your analysis.
+The main pooled attendance association was approximately **0.375 points in home-team score margin per additional 10,000 attendees** (95% CI: 0.149–0.601).
 
-## Input files and when they are needed
+This estimate is associational and should not be interpreted as evidence that increasing attendance causes a corresponding change in score margin.
 
-The **seven required local inputs** are five conference workbooks plus two classification CSVs. The correction log is **conditional**, not universally required.
-
-| File in `data/raw/` | Purpose | Requirement |
-| --- | --- | --- |
-| `SEC data merged.xlsx` | SEC game records | Required |
-| `big 10 merged .xlsx` | Big Ten game records | Required; note the space before `.xlsx` |
-| `big 12 merged data.xlsx` | Big 12 game records | Required |
-| `Atlantic coast merged data.xlsx` | ACC game records | Required |
-| `pac 12 fmerged_BG.xlsx` | Pac-12 game records | Required |
-| `championship_games_sources.csv` | Sourced championship-game identification, attendance, and venue classifications | Required |
-| `rivalries.csv` | Documented rivalry team-pair classifications for sensitivity analyses | Required |
-| `verification_log.csv` | Sources for **proposed corrections** to submitted game records | **Only required if corrections are proposed** |
-
-All five workbooks must contain a worksheet called `total`. See `data/README.md` for the exact field names, CSV template columns, and source-documentation expectations. **The files in `templates/` contain headers only.** They guide preparation of the completed CSVs; they do not contain verified games or classifications and cannot replace populated required inputs.
-
-### What is checked independently?
-
-`R/01_clean_data.R` retrieves the 2019, 2020, and 2021 schedule CSVs from the [SportsDataverse `cfbfastR-data` project](https://github.com/sportsdataverse/cfbfastR-data), saves them in `data/raw/independent/`, and checks their MD5 hashes against values recorded in the script. It matches games using season and team identifiers (including defined alias and reversal rules), compares available scores and attendance, and obtains **pregame home- and away-team Elo ratings**. An independent-source disagreement is a **candidate discrepancy**, not proof that the submitted record is wrong. A checksum mismatch or ambiguous match is a reason to investigate, not to disable the check.
-
-**Elo and rivalry are different variables.** Elo is a team-strength measure supplied by the independent schedules. The rivalry indicator comes from `rivalries.csv`: the code assigns `rivalry = 1` when the unordered home/away pair matches a listed team pair, and `0` otherwise. The original study's list contains **34 documented rivalry pairs** selected using NCAA trophy-game and most-played rivalry records. The list is study-specific and should not be treated as an exhaustive definition of all rivalries. Researchers must check the sources and exact team names when reconstructing it; the populated list is not distributed here.
-
-### Championship games and corrections are not the same thing
-
-The required `championship_games_sources.csv` records the study's championship-game decisions. The cleaning script also uses **explicitly coded game-identification rules** for the original five conferences and seasons. This file is needed even if the workbooks contain no errors. The required `rivalries.csv` defines a separate analysis covariate.
-
-By contrast, `verification_log.csv` documents **changes proposed after comparing input records with the independent schedules and study-specific rules**. It can be absent when those checks propose no corrections. If corrections are proposed and the log is missing or lacks matching source references, the script intentionally stops before saving the final derived analysis dataset. The original Excel workbooks are not overwritten.
-
-## What to do when validation stops
-
-An error during `01_clean_data.R` is usually a request to **inspect the inputs or a matching rule**, not evidence that the entire statistical model failed. In particular, a message reporting a number of proposed corrections does **not** mean that many workbook values are definitely incorrect.
-
-**If the script reports proposed corrections:**
-
-1. Open `output/tables/corrections_needing_verification.csv`. Review the `conference`, `year`, `away`, `home`, `field`, `old_value`, `new_value`, and `reason` columns. The proposed `source_url` is blank until documented.
-2. Compare each proposed change with appropriate authoritative records. Check team-name aliases, season, scores, attendance, venue, neutral-site status, and home/away assignment. The independent source or the matching rule may itself be wrong.
-3. **If the proposed correction is justified**, copy `templates/verification_log_template.csv` to `data/raw/verification_log.csv` and complete a corresponding row. The code matches `conference`, `year`, `away`, `home`, and `field`, and requires a real, nonempty `source_url` for each proposed correction. Include the old/new values and supporting notes for a transparent audit. Do not invent citations.
-4. **If the submitted value is already correct**, do not fabricate a correction entry. Investigate and resolve the comparison or matching rule. This version has no separate accept-as-is override file; a justified code change must be reviewed and checked against the original study results.
-5. Rerun `source("run_all.R")`. Inspect `output/tables/data_fixes.csv`, `data_verification.csv`, and the derived dataset before interpreting the model outputs.
-
-**If no corrections are proposed:** The code proceeds without `verification_log.csv` while still performing the independent schedule matching and other implemented checks. Passing these checks does **not** guarantee that every data value is correct.
-
-| Error or warning | Interpretation and response |
-| --- | --- |
-| Missing Excel workbook, `total` sheet, or required column | Check exact filenames and field names in `data/README.md`. |
-| Championship source file missing or missing `source_url` | Complete `championship_games_sources.csv` from independently checked records; the template alone is insufficient. |
-| Rivalry file missing or team names do not match | Supply a completed `rivalries.csv`; check both team-name columns against the workbook identifiers. |
-| No independent game match or ambiguous match | Inspect season, home/away team names, aliases, venue, and duplicate fixtures. Do not force a guessed match. |
-| Download or MD5 mismatch | Investigate connectivity or upstream source changes; do not silently bypass the integrity check. |
-| Proposed corrections without a complete log | Review `corrections_needing_verification.csv`, resolve disagreements, and document only justified corrections. |
-| R package built under another R version | Often a compatibility warning rather than a stopping error; record versions and verify the run. |
-| `geom_errorbarh()` deprecated or `height` translated to `width` | Plotting/formatting notices; distinguish them from data-validation errors. |
-| Long hierarchical run | Optimization and simulation can be computationally intensive; wait for the completion message. |
-
-## Analysis scripts
-
-`run_all.R` runs the following scripts in dependency order. `R/00_functions.R` contains shared helpers.
-
-| Script | Purpose |
-| --- | --- |
-| `R/00_setup.R` | Package checks and output directories |
-| `R/01_clean_data.R` | Read inputs, match independent schedules, audit proposed corrections, build derived datasets |
-| `R/02_descriptives.R` | Descriptive summaries |
-| `R/03_conference_models.R` | Conference-specific regressions |
-| `R/04_meta_analysis.R` | REML random-effects meta-analysis and sensitivity estimates |
-| `R/05_home_intercept.R` | Home-stadium specifications |
-| `R/06_one_stage.R` | One-stage models |
-| `R/07_robustness.R` | Robustness checks, including rivalry-based analyses |
-| `R/08_competitive_balance.R` | Competitive-balance analyses |
-| `R/09_diagnostics.R` | Model diagnostics |
-| `R/12_hierarchical.R` | Hierarchical fitting and numerical optimization checks |
-| `R/13_hierarchical_check.R` | Simulation-based implementation checks |
-| `R/10_figures.R` | Figure generation |
-
-## Outputs
-
-The scripts create `data/derived/`, `output/tables/`, `output/figures/`, and `output/diagnostics/hierarchical/` as needed. Generated results and local input data are excluded by `.gitignore`.
-
-- **Derived datasets and model objects:** `data/derived/`, including `games.rds`, `games_with_titles.rds`, model fits, and intermediate results.
-- **Tables and audits:** `output/tables/`, including conference estimates, pooled effects, sensitivity analyses, `data_fixes.csv`, `data_verification.csv`, `championship_games_removed.csv`, and `rivalry_games_list.csv`. These audit tables are **outputs**, not substitutes for input CSVs.
-- **Figures:** `output/figures/`, in PNG/PDF formats.
-- **Hierarchical diagnostics:** `output/diagnostics/hierarchical/`. The original simulation-check script uses 18 datasets by default; diagnostics do not prove a global optimum or guarantee model adequacy.
-
-## Reproducibility checks and interpretation
-
-For **any dataset supported by a properly reviewed version of this workflow**, examine the final game count, inclusion/exclusion decisions, missingness, duplicates, attendance and score validity, independent matches, source documentation, model estimates, uncertainty intervals, diagnostics, and figures. Repeating the analysis with the same input data and software environment should produce consistent results. The expected sample size and estimates depend on the supplied data and any justified code adaptations.
-
-**Original-study benchmark (not a requirement for other datasets):** The analysis included 824 source games across the five Power Five conferences during the 2019–2021 seasons. After excluding 15 championship games, the final analytical sample consisted of 809 games. The main pooled attendance estimate was approximately 0.375059 points per 10,000 spectators. These findings serve as reference values for reproducing the original study using equivalent input data and analysis specifications. Researchers should review the data-validation reports, model diagnostics, and generated outputs to ensure consistency with the original analysis.
-
-## Repository contents and data access
+## Repository Structure
 
 ```text
-README.md
-run_all.R
-college-football-attendance.Rproj
-R/                       # original analysis scripts
-  00_setup.R
-  00_functions.R
-  01_clean_data.R
-  02_descriptives.R
-  03_conference_models.R
-  04_meta_analysis.R
-  05_home_intercept.R
-  06_one_stage.R
-  07_robustness.R
-  08_competitive_balance.R
-  09_diagnostics.R
-  10_figures.R
-  12_hierarchical.R
-  13_hierarchical_check.R
-templates/               # blank CSV headers only
-  championship_games_sources_template.csv
-  rivalries_template.csv
-  verification_log_template.csv
-data/
-  README.md
-  raw/.gitkeep
-.gitignore
+College-Football-Attendance-Score-Margin/
+├── README.md
+├── run_all.R
+├── college-football-attendance.Rproj
+├── R/
+│   ├── 00_setup.R
+│   ├── 00_functions.R
+│   ├── 01_clean_data.R
+│   ├── 02_descriptives.R
+│   ├── 03_conference_models.R
+│   ├── 04_meta_analysis.R
+│   ├── 05_home_intercept.R
+│   ├── 06_one_stage.R
+│   ├── 07_robustness.R
+│   ├── 08_competitive_balance.R
+│   ├── 09_diagnostics.R
+│   ├── 10_figures.R
+│   ├── 12_hierarchical.R
+│   ├── 13_hierarchical_check_preliminary_18.R
+│   ├── 13_hierarchical_simulation_1000.R
+│   └── 14_summarize_hierarchical_simulations_1000.R
+├── templates/
+│   ├── championship_games_sources_template.csv
+│   ├── rivalries_template.csv
+│   └── verification_log_template.csv
+└── data/
+    ├── README.md
+    └── raw/
 ```
 
-**Data access and licensing:** This code-focused repository intentionally omits the populated conference workbooks, completed championship and rivalry records, and populated correction logs. Researchers must obtain or reconstruct inputs from sources they are authorized to use. Providing a citation or source URL does not itself grant redistribution rights. Exact numerical reproduction requires equivalent inputs and decisions; the public ZIP alone cannot reproduce the article's numerical results.
+The structure above describes the intended organization. Generated datasets, simulation checkpoints, and output files may exist only in the local working environment.
 
-## Citation and attribution
+## Required Input Data
 
-If you use this research code, cite *Attendance and the Home Score Margin in College Football: Evidence from the COVID-19 Seasons* using its final bibliographic information when available. Cite the original game-data and verification sources as appropriate. This repository does not claim a publication DOI or a code license that has not been established.
+The original analysis requires five conference workbooks and two completed classification files in `data/raw/`.
+
+| Input file | Description |
+|---|---|
+| `SEC data merged.xlsx` | SEC game records |
+| `big 10 merged .xlsx` | Big Ten game records |
+| `big 12 merged data.xlsx` | Big 12 game records |
+| `Atlantic coast merged data.xlsx` | ACC game records |
+| `pac 12 fmerged_BG.xlsx` | Pac-12 game records |
+| `championship_games_sources.csv` | Verified conference championship-game classifications |
+| `rivalries.csv` | Documented rivalry team-pair classifications |
+| `verification_log.csv` | Conditional file documenting proposed data corrections |
+
+All five workbooks must contain a worksheet named `total`.
+
+The files in `templates/` provide CSV structures only. They are not completed datasets or verified classifications.
+
+The public repository does not distribute the populated original study datasets. Researchers must obtain or reconstruct equivalent inputs from sources they are authorized to use.
+
+## Data Verification
+
+The data-cleaning workflow compares game records with independent schedules from the [SportsDataverse cfbfastR-data repository](https://github.com/sportsdataverse/cfbfastR-data).
+
+The verification process examines game matching, team names, home/away assignments, scores, attendance, and venue classifications. It also obtains pregame Elo ratings for team-strength adjustment.
+
+Independent-source discrepancies are treated as candidates for investigation, not automatically accepted as corrections. Proposed changes must be reviewed and supported by documented sources.
+
+The cleaning script preserves the original Excel workbooks and writes derived datasets separately.
+
+The rivalry indicator is based on a study-specific list of 34 documented rivalry pairs; it is not intended as an exhaustive classification of every rivalry.
+
+## Running the Main Analysis
+
+Install R and the required packages, including:
+
+- `readxl`
+- `metafor`
+- `ggplot2`
+- `sandwich`
+- `lmtest`
+- `lme4`
+
+From the repository root, run:
+
+```r
+source("run_all.R")
+```
+
+Alternatively, from a terminal:
+
+```bash
+Rscript run_all.R
+```
+
+Review any validation errors before proceeding. Do not bypass failed game-matching checks or undocumented correction requirements merely to complete a run.
+
+**Note:** The final 1,000-replicate simulation is a separate workflow and should not be assumed to execute automatically through `run_all.R`.
+
+## Hierarchical Models and Numerical Diagnostics
+
+The empirical analysis includes hierarchical specifications that account for variation in team strength and team-season performance.
+
+Numerical optimization checks were conducted to assess computational stability. These are documented separately from the simulation study and correspond to **Supplementary Figures S7 and S8**.
+
+Numerical convergence does not, by itself, establish causal identification, global optimality, or model adequacy.
+
+## Final Hierarchical Simulation Study: 1,000 Replicates
+
+The final simulation study evaluates parameter recovery and confidence-interval coverage under a prespecified data-generating mechanism using the observed study design.
+
+A total of **1,000 simulated datasets** were analyzed, organized into **100 batches of 10 replicates**.
+
+The data-generating settings were:
+
+| Parameter | True value |
+|---|---:|
+| Home-intercept coefficient | 0.000 |
+| Attendance coefficient (points per 10,000 attendees) | 0.500 |
+| Between-team standard deviation | 9 |
+| Team-season standard deviation | 5 |
+| Residual standard deviation | 14 |
+
+All **1,000 of 1,000 model fits converged** in the completed simulation study.
+
+### Simulation Results
+
+| Parameter | True value | Mean estimate | Bias | Empirical SD | Mean SE | 95% CI coverage |
+|---|---:|---:|---:|---:|---:|---:|
+| Home intercept | 0.000 | 0.0089 | 0.0089 | 0.8644 | 0.8939 | 96.7% |
+| Attendance | 0.500 | 0.4933 | -0.0067 | 0.1752 | 0.1868 | 97.1% |
+
+The simulation results indicate small empirical bias and coverage slightly above the nominal 95% level under the specified simulation design.
+
+These findings assess the performance of the estimation procedure under the simulated conditions. They do not establish that the observational attendance association is causal or that the model performs equally well under other data-generating mechanisms.
+
+### Corresponding Supplementary Materials
+
+- **Supplementary Table S14:** Hierarchical parameter recovery, bias, empirical variability, and confidence-interval coverage.
+- **Supplementary Figure S9:** Distributions of hierarchical parameter estimates across 1,000 simulations.
+- **Supplementary Figure S10:** Empirical confidence-interval coverage across 1,000 simulations.
+
+Supplementary Figures S7–S8 concern numerical optimization diagnostics and are not simulation-study figures.
+
+## Reproducing the 1,000 Simulations
+
+The main simulation script is:
+
+```text
+R/13_hierarchical_simulation_1000.R
+```
+
+After preparing the required original-study data and derived objects, run the following from the repository root to permit fitting or resuming simulations:
+
+```r
+Sys.setenv(
+  HIER_SIM_N = "1000",
+  HIER_SIM_BATCH = "10",
+  HIER_SIM_NSTARTS = "1",
+  HIER_SIM_RECOVER_ONLY = "0"
+)
+
+source("R/13_hierarchical_simulation_1000.R")
+```
+
+Completed batches are checkpointed under:
+
+```text
+data/derived/hierarchical_simulation_v2/batch010_starts01/
+```
+
+The checkpointing design supports resuming interrupted work without unnecessarily refitting completed batches. Existing batches should not be overwritten unless a deliberate rerun is intended.
+
+To recover results from existing checkpoints without fitting new models:
+
+```r
+Sys.setenv(HIER_SIM_RECOVER_ONLY = "1")
+source("R/13_hierarchical_simulation_1000.R")
+```
+
+To recover and summarize the completed 100 batches:
+
+```r
+source("R/14_summarize_hierarchical_simulations_1000.R")
+```
+
+The recovery script expects files named `batch_0001.rds` through `batch_0100.rds` in the checkpoint directory.
+
+It generates summary files including:
+
+```text
+simulation_results_n1000.csv
+simulation_summary_n1000.csv
+```
+
+The script also produces figures and saves the recovered outputs to a local `Documents/HFA_hierarchical_simulation_outputs/` directory. These outputs are not automatically uploaded to GitHub.
+
+The full simulation may require substantial computing time, depending on the system.
+
+## Preliminary Simulation Check: 18 Replicates
+
+The repository also retains:
+
+```text
+R/13_hierarchical_check_preliminary_18.R
+```
+
+This script represents an earlier preliminary implementation check involving 18 simulated datasets.
+
+**The 18-replicate check is not the final simulation study reported in the revised manuscript.**
+
+The final reported parameter-recovery and coverage results are based exclusively on the 1,000-replicate study.
+
+The preliminary script is retained for transparency and development history.
+
+## Sensitivity Analyses
+
+The analysis includes checks involving:
+
+- Alternative specifications of home advantage.
+- Pregame Elo team-strength adjustment.
+- Rivalry-game adjustments and exclusions.
+- Heteroskedasticity-consistent standard errors.
+- Analyses excluding the 2020 season.
+- Conference-level heterogeneity.
+- Hierarchical model specifications.
+- Numerical optimization and influence diagnostics.
+
+The analyses help assess robustness to modeling decisions but do not eliminate the possibility of residual confounding.
+
+## Generated Outputs
+
+Depending on the scripts executed, the workflow creates:
+
+```text
+data/derived/
+output/tables/
+output/figures/
+output/diagnostics/hierarchical/
+```
+
+Generated outputs include derived game records, model objects, conference estimates, pooled meta-analysis results, sensitivity analyses, data-verification reports, diagnostic summaries, and figures.
+
+Simulation checkpoints and recovered summaries are generated separately.
+
+Users should inspect the resulting sample sizes, estimates, uncertainty intervals, and diagnostics rather than assuming that a completed script establishes successful reproduction.
+
+## Reproducibility and Limitations
+
+This repository documents the analytical procedures used in the original study. It is not a general-purpose pipeline for arbitrary seasons, conferences, or data formats.
+
+The original analysis includes study-specific cleaning rules, championship classifications, rivalry definitions, and independent schedule checks. Applying the workflow elsewhere requires reviewing and adapting those rules.
+
+Because populated study input files are not included in this code-focused repository, exact numerical reproduction requires access to equivalent original-study inputs and classification decisions.
+
+The study's main attendance association should not be interpreted causally. The COVID-19 seasons involved changes in scheduling, stadium policies, team conditions, and other factors that may affect both attendance and game outcomes.
+
+## Citation
+
+If you use this repository, please cite:
+
+*Attendance and the Home Score Margin in College Football: Evidence from the COVID-19 Seasons.*
+
+Use the article's final bibliographic details when available. Cite the original data and verification sources as appropriate.
+
+No publication DOI or software license is claimed here unless separately established.
