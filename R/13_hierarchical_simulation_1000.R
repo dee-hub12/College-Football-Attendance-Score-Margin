@@ -1,6 +1,6 @@
-# R/13_hierarchical_check.R
+# R/13_hierarchical_simulation_1000.R
 # Hierarchical-model parameter recovery, checkpointing, tables, and plots.
-# Run from project root: source("R/13_hierarchical_check.R")
+# Run from project root: source("R/13_hierarchical_simulation_1000.R")
 # Existing batches are ALWAYS reused. Set HIER_SIM_FORCE=1 only to refit deliberately.
 # Set HIER_SIM_RECOVER_ONLY=1 to prohibit any new simulation fits.
 
