@@ -1,7 +1,5 @@
 # RECOVER HIERARCHICAL SIMULATION OUTPUTS — NO MODEL FITTING
 # Run from the project root using source("R/14_recover_hierarchical_outputs.R")
-# Reads the 100 existing RDS batches on the S: drive.
-# Writes all outputs to a LOCAL Documents folder to avoid S: drive write errors.
 
 project_root <- normalizePath(getwd(), winslash = "/", mustWork = TRUE)
 sim_dir <- file.path(project_root, "data", "derived", "hierarchical_simulation_v2", "batch010_starts01")
