@@ -1,5 +1,5 @@
 # RECOVER HIERARCHICAL SIMULATION OUTPUTS — NO MODEL FITTING
-# Run from the project root using source("R/14_recover_hierarchical_outputs.R")
+# Run from project root: source("R/14_summarize_hierarchical_simulations_1000.R")
 
 project_root <- normalizePath(getwd(), winslash = "/", mustWork = TRUE)
 sim_dir <- file.path(project_root, "data", "derived", "hierarchical_simulation_v2", "batch010_starts01")
