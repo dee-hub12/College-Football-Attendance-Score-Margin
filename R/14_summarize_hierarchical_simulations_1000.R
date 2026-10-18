@@ -6,7 +6,7 @@ sim_dir <- file.path(project_root, "data", "derived", "hierarchical_simulation_v
 paths <- file.path(sim_dir, sprintf("batch_%04d.rds", 1:100))
 if (!all(file.exists(paths))) stop("Missing batches: ", paste(basename(paths[!file.exists(paths)]), collapse = ", "))
 
-# Choose a writable local folder. Do not write into the S: checkpoint directory.
+# Choose a writable local folder. 
 user_home <- Sys.getenv("USERPROFILE", unset = path.expand("~"))
 output_dir <- file.path(user_home, "Documents", "HFA_hierarchical_simulation_outputs")
 dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
