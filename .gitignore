@@ -1,0 +1,16 @@
+# Data and generated results are not committed by default.
+data/raw/*
+!data/raw/.gitkeep
+data/derived/
+output/
+.Rhistory
+.RData
+.Ruserdata/
+.Rproj.user/
+*.Rproj.user
+.DS_Store
+Thumbs.db
+
+# Local simulation summaries and temporary archives
+HFA_hierarchical_simulation_outputs/
+*.zip
