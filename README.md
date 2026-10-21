@@ -84,7 +84,7 @@ All five workbooks must contain a worksheet named `total`.
 
 The files in `templates/` provide CSV structures only. They are not completed datasets or verified classifications.
 
-The public repository does not distribute the populated original study datasets. Researchers must obtain or reconstruct equivalent inputs from sources they are authorized to use.
+The public code-only repository does not distribute populated original study datasets, derived RDS files, generated outputs, or the 100 simulation checkpoint batches. Researchers must obtain or reconstruct equivalent study inputs from sources they are authorized to use. The original completed 1,000-replicate outputs are reported in the manuscript and supplement; reproducing them requires executing the simulation or obtaining the original checkpoint files separately.
 
 ## Data Verification
 
@@ -123,7 +123,7 @@ Rscript run_all.R
 
 Review any validation errors before proceeding. Do not bypass failed game-matching checks or undocumented correction requirements merely to complete a run.
 
-**Note:** The final 1,000-replicate simulation is a separate workflow and should not be assumed to execute automatically through `run_all.R`.
+**Note:** The final 1,000-replicate simulation is a separate workflow and does not execute automatically through `run_all.R`.
 
 ## Hierarchical Models and Numerical Diagnostics
 
@@ -212,7 +212,7 @@ To recover and summarize the completed 100 batches:
 source("R/14_summarize_hierarchical_simulations_1000.R")
 ```
 
-The recovery script expects files named `batch_0001.rds` through `batch_0100.rds` in the checkpoint directory.
+The recovery script expects files named `batch_0001.rds` through `batch_0100.rds` in the checkpoint directory. **Those checkpoints are not included in this code-only release.** Run the simulation to create them before using recovery mode. The summarizer does not fit models.
 
 It generates summary files including:
 
@@ -269,7 +269,7 @@ output/diagnostics/hierarchical/
 
 Generated outputs include derived game records, model objects, conference estimates, pooled meta-analysis results, sensitivity analyses, data-verification reports, diagnostic summaries, and figures.
 
-Simulation checkpoints and recovered summaries are generated separately.
+Simulation checkpoints and recovered summaries are generated separately. The public code-only package intentionally excludes `output/`, `data/derived/`, and `HFA_hierarchical_simulation_outputs/`; keep these locally as your validated analysis record.
 
 Users should inspect the resulting sample sizes, estimates, uncertainty intervals, and diagnostics rather than assuming that a completed script establishes successful reproduction.
 
